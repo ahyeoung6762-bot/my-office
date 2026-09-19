@@ -2,8 +2,9 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 import { integrationStatus, publishReport, type DayReport, type PublishEnv } from "./report";
+import { generateAiBrief, type AiBriefEnv } from "./ai-brief";
 
-interface Env extends PublishEnv {
+interface Env extends PublishEnv, AiBriefEnv {
   ASSETS: Fetcher;
   DB: D1Database;
   IMAGES: {
@@ -45,6 +46,13 @@ const worker = {
       } catch (error) {
         return Response.json({ error: String(error) }, { status: 400 });
       }
+    }
+
+    // 실제 웹 검색 기반 오늘의 AI 리서치 브리핑 생성 (Claude API)
+    if (url.pathname === "/api/ai-brief") {
+      if (request.method !== "POST") return new Response("POST only", { status: 405 });
+      const result = await generateAiBrief(env);
+      return Response.json(result, { status: result.ok ? 200 : 502 });
     }
 
     if (url.pathname === "/_vinext/image") {

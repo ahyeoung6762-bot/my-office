@@ -10,9 +10,10 @@ import {
   type IntegrationStatus,
   type PublishResult,
 } from "./game/report";
+import { requestAiBrief, type AiBriefResult } from "./game/aiBrief";
 import { Company, PHASES, type Agent, type DeptStatus, type Snapshot } from "./game/sim";
 import { CEO, DEPT_BRIEF, DEPT_LEAD, STAFF } from "./game/staff";
-import { DEPT_ROOMS } from "./game/world";
+import { DEPT_ROOMS, roomOf } from "./game/world";
 import { COMPANY, STORAGE_LINK } from "../company.config";
 
 type View = "live" | "dashboard";
@@ -66,6 +67,10 @@ export default function Home() {
     busy: false,
     result: null,
     error: "",
+  });
+  const [aiBrief, setAiBrief] = useState<{ busy: boolean; result: AiBriefResult | null }>({
+    busy: false,
+    result: null,
   });
   const publishedRef = useRef(false);
 
@@ -133,6 +138,19 @@ export default function Home() {
     },
     [engine, showToast],
   );
+
+  const makeAiBrief = useCallback(async () => {
+    setAiBrief({ busy: true, result: null });
+    try {
+      const result = await requestAiBrief();
+      setAiBrief({ busy: false, result });
+      if (!result.ok) showToast(result.error ?? "AI 브리핑 생성 실패");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setAiBrief({ busy: false, result: { ok: false, generatedAt: new Date().toISOString(), sections: [], error: message } });
+      showToast(message);
+    }
+  }, [showToast]);
 
   // 하루가 끝나면 자동으로 한 번 발행한다
   useEffect(() => {
@@ -234,6 +252,8 @@ export default function Home() {
             onPublish={() => void sendReport(false)}
             publishBusy={publishState.busy}
             publishResult={publishState.result}
+            onAiBrief={() => void makeAiBrief()}
+            aiBriefBusy={aiBrief.busy}
           />
         ) : (
           <DashboardView
@@ -271,6 +291,7 @@ export default function Home() {
         />
       ) : null}
       {briefing ? <BriefingModal snap={snap} onClose={() => setBriefing(false)} /> : null}
+      {aiBrief.result?.ok ? <AiBriefModal result={aiBrief.result} onClose={() => setAiBrief({ busy: false, result: null })} /> : null}
       <div className={`toast ${toast ? "show" : ""}`} role="status">
         {toast}
       </div>
@@ -291,6 +312,8 @@ function LiveView({
   onPublish,
   publishBusy,
   publishResult,
+  onAiBrief,
+  aiBriefBusy,
 }: {
   engine: Company;
   snap: Snapshot;
@@ -304,6 +327,8 @@ function LiveView({
   onPublish: () => void;
   publishBusy: boolean;
   publishResult: PublishResult | null;
+  onAiBrief: () => void;
+  aiBriefBusy: boolean;
 }) {
   const progress = Math.round((snap.phaseIndex / (PHASES.length - 1)) * 100);
 
@@ -366,6 +391,14 @@ function LiveView({
           title="완료 보고를 Notion에 저장하고 같은 내용을 Discord로 보냅니다"
         >
           {publishBusy ? "발행 중…" : "📤 보고 발행"}
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={onAiBrief}
+          disabled={aiBriefBusy}
+          title="Claude가 웹 검색으로 오늘 실제 증시 뉴스를 찾아 부서별 리서치를 씁니다 (API 키 필요)"
+        >
+          {aiBriefBusy ? "AI가 오늘 시황 찾는 중…" : "🧠 오늘의 AI 리서치"}
         </button>
         <div className="live-progress">
           <span>
@@ -665,6 +698,51 @@ function BriefingModal({ snap, onClose }: { snap: Snapshot; onClose: () => void 
             <span className="tiny-label">오늘 대표님이 결정할 것</span>
             <strong>없습니다. 내일 07:00에 다시 출근할게요 ✨</strong>
           </div>
+          <button className="btn btn-primary" onClick={onClose}>
+            확인
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function AiBriefModal({ result, onClose }: { result: AiBriefResult; onClose: () => void }) {
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <section
+        className="win team-modal"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="오늘의 AI 리서치 브리핑"
+      >
+        <div className="win-bar">
+          <span>🧠 today_research.brief</span>
+          <button className="window-close" onClick={onClose}>
+            ✕
+          </button>
+        </div>
+        <div className="win-body">
+          <p className="brief-date">
+            {new Date(result.generatedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} · Claude 웹 검색 기반
+          </p>
+          <h3>오늘 실제 시황을 찾아 정리했어요.</h3>
+          {result.sections.map((section) => {
+            const room = roomOf(section.dept);
+            return (
+              <div key={section.dept} className="decision-box" style={{ marginBottom: 12 }}>
+                <span className="tiny-label">
+                  {room.icon} {room.name}
+                  {section.title ? ` — ${section.title}` : ""}
+                </span>
+                <p style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>{section.body}</p>
+              </div>
+            );
+          })}
+          <p style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+            ⚠️ AI가 생성한 요약이며 투자 자문이 아닙니다. 최종 투자 판단은 본인 책임입니다.
+          </p>
           <button className="btn btn-primary" onClick={onClose}>
             확인
           </button>
