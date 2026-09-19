@@ -145,23 +145,23 @@ const BLOCKED_DEPTS = new Set(["brand", "partner", "finance"]);
 
 /** 연동 대기 부서가 멈춰 있는 진짜 이유 */
 const BLOCK_REASON: Record<string, string> = {
-  brand: "Instagram 계정이 아직 연동 전이라 지표를 읽을 수 없어요. 없는 숫자를 만들지는 않습니다. 연동만 되면 바로 돌려요.",
-  partner: "Gmail 연동 전이라 협업 메일을 못 읽어요. 연결되면 답장 초안까지 준비해둡니다.",
-  finance: "재무 현황 파일이 아직 안 왔어요. 대표님이 파일만 주시면 그날 안에 정리합니다.",
+  brand: "종목 재무데이터 연동 전이라 실적 지표를 읽을 수 없어요. 없는 숫자를 만들지는 않습니다. 연동만 되면 바로 돌려요.",
+  partner: "IR 메일함 연동 전이라 기업 문의 메일을 못 읽어요. 연결되면 답장 초안까지 준비해둡니다.",
+  finance: "재무제표 현황 파일이 아직 안 왔어요. 대표님이 파일만 주시면 그날 안에 정리합니다.",
 };
 
 /** 지시창에서 부서를 찾을 때 쓰는 키워드 — 구체적인 것부터 검사한다 */
 const DEPT_KEYWORDS: [string, string[]][] = [
-  ["qa", ["qa", "큐아", "검수", "금칙어", "윤규아"]],
-  ["brand", ["인텔", "페르소나", "박보라", "브랜드 인텔"]],
-  ["strategy1", ["전략 1", "전략1", "기획", "아이디어", "최아름", "톱3", "top 3"]],
-  ["strategy2", ["전략 2", "전략2", "대본", "한도빈", "스크립트"]],
-  ["research", ["시장조사", "리서치", "조사팀", "뉴스", "김서연"]],
-  ["reels", ["릴스", "영상", "편집", "송리원"]],
-  ["carousel", ["캐러셀", "카드뉴스", "canva", "칸바", "이가림"]],
-  ["partner", ["파트너", "협찬", "광고 제안", "메일", "정파랑"]],
-  ["finance", ["재무", "정산", "입금", "돈", "오재민"]],
-  ["review", ["성과", "리뷰", "지표", "강성아"]],
+  ["qa", ["qa", "큐아", "검수", "리스크", "윤규아"]],
+  ["brand", ["종목", "펀더멘털", "박보라", "종목분석"]],
+  ["strategy1", ["전략 1", "전략1", "투자전략", "아이디어", "최아름", "톱3", "top 3"]],
+  ["strategy2", ["전략 2", "전략2", "리포트", "한도빈", "투자포인트"]],
+  ["research", ["시황조사", "시황", "조사팀", "뉴스", "김서연"]],
+  ["reels", ["차트", "기술분석", "이평선", "송리원"]],
+  ["carousel", ["리포트디자인", "시각자료", "그래프", "이가림"]],
+  ["partner", ["ir", "아이알", "기업문의", "메일", "정파랑"]],
+  ["finance", ["재무", "재무제표", "실적", "오재민"]],
+  ["review", ["성과", "수익률", "리뷰", "강성아"]],
   ["ops", ["자동화", "운영팀", "스케줄", "안도현"]],
   ["secretary", ["비서", "김세리", "비서실"]],
 ];
@@ -393,21 +393,21 @@ export class Company {
     this.phaseIndex = 3;
     const bora = this.agentById.get("brand-lead")!;
     this.stand(bora);
-    this.say(bora, "Instagram 미연동이라 수치는 못 만들어요.", 3);
-    this.pushLog("🧬", "브랜드 인텔리전스팀: Instagram 미연동 → 분석값을 만들지 않고 기록만 남김", "lav");
+    this.say(bora, "종목 재무데이터 미연동이라 수치는 못 만들어요.", 3);
+    this.pushLog("🧬", "종목분석팀: 재무데이터 미연동 → 분석값을 만들지 않고 기록만 남김", "lav");
     this.goto(bora, rand(LOUNGE_ROOM.loiter), "휴식");
     this.enqueue(bora, { k: "wait", dur: 4 }, { k: "fn", fn: () => this.say(bora, "연결되면 바로 돌립니다.", 2.4) });
     this.sitAtDesk(bora);
-    this.pushLog("💌", "파트너십·재무팀: Gmail·재무 파일 연동 전이라 오늘은 대기합니다.", "lav");
+    this.pushLog("💌", "IR·재무분석팀: 메일·재무제표 파일 연동 전이라 오늘은 대기합니다.", "lav");
 
-    // ④ 회의 1 — 시장조사 → 전략1 → QA 인수인계
+    // ④ 회의 1 — 시황조사 → 전략1 → QA 인수인계
     yield* this.meeting(
       "오늘의 후보 인수인계",
       ["research-lead", "strategy1-lead", "qa-lead"],
       [
         ["research-lead", "오늘 검증된 후보 5개예요. 전부 공식 출처 확인했어요."],
-        ["strategy1-lead", "좋아요. 콘텐츠 각도 10개로 풀게요."],
-        ["qa-lead", "DNA랑 최근 7일 중복부터 확인할게요."],
+        ["strategy1-lead", "좋아요. 투자 아이디어 10개로 풀게요."],
+        ["qa-lead", "근거랑 최근 7일 중복부터 확인할게요."],
       ],
     );
 
@@ -425,7 +425,7 @@ export class Company {
     const areum = this.agentById.get("strategy1-lead")!;
     this.stand(areum);
     this.say(areum, "TOP 3 정리했어요. 1위는 92점!", 3);
-    this.pushLog("💡", "콘텐츠 전략 1팀: TOP 3 확정 (1위 92점 · AI 회사 구축기)", "pink");
+    this.pushLog("💡", "투자전략 1팀: TOP 3 확정 (1위 92점 · 2차전지 밸류체인 점검)", "pink");
     yield 1.8;
     this.sitAtDesk(areum);
 
@@ -457,7 +457,7 @@ export class Company {
     );
     yield this.allFree([...approvers, ceo]);
 
-    this.say(approvers[0], "TOP 1은 'AI 회사가 나 대신 출근한다면?' 92점이에요.", 3.4);
+    this.say(approvers[0], "TOP 1은 '2차전지 밸류체인 점검' 92점이에요.", 3.4);
     yield 2.4;
     this.say(approvers[2], "대표님, 오늘 결정하실 건 이거 하나예요.", 3.2);
     yield 2.2;
@@ -469,7 +469,7 @@ export class Company {
     this.approvalPending = false;
     this.meetingTitle = null;
     this.say(ceo, "승인! 이대로 갑시다.", 2.8);
-    this.pushLog("✅", "대표 승인 완료 — TOP 1 콘텐츠 제작을 시작합니다.", "mint");
+    this.pushLog("✅", "대표 승인 완료 — TOP 1 리서치 제작을 시작합니다.", "mint");
     yield 1.6;
     for (const agent of approvers) {
       this.releaseSeat(agent);
@@ -705,7 +705,7 @@ export class Company {
     this.pushChat(
       "staff",
       "김세리",
-      "이렇게 물어보시면 제일 빨라요 — “현황 보고” / “왜 늦어져?” / “시장조사팀 뭐해?” / “회의 소집” / “집중 모드” / “지금 브리핑”.",
+      "이렇게 물어보시면 제일 빨라요 — “현황 보고” / “왜 늦어져?” / “시황조사팀 뭐해?” / “회의 소집” / “집중 모드” / “지금 브리핑”.",
     );
   }
 

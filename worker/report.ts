@@ -7,6 +7,9 @@
  *   DISCORD_WEBHOOK_URL   보고를 받을 채널의 웹훅 URL
  */
 
+import type { AiBriefEnv } from "./ai-brief";
+import type { TossEnv } from "./toss";
+
 export type DayReport = {
   title: string;
   clock: string;
@@ -29,14 +32,20 @@ type TargetResult = { ok: boolean; status: "sent" | "unconfigured" | "failed"; d
 
 const NOTION_VERSION = "2022-06-28";
 
-export function integrationStatus(env: PublishEnv) {
+export function integrationStatus(env: PublishEnv & TossEnv & AiBriefEnv) {
   return {
     notion: { configured: Boolean(env.NOTION_TOKEN && env.NOTION_BRIEFING_DB), label: "Notion 저장" },
     discord: { configured: Boolean(env.DISCORD_WEBHOOK_URL), label: "Discord 전송" },
-    // 아래 3개는 자격증명을 받는 즉시 같은 방식으로 붙는다
-    instagram: { configured: false, label: "Instagram 지표", need: "Meta 비즈니스 앱 + 장기 액세스 토큰" },
-    gmail: { configured: false, label: "Gmail 읽기", need: "Google OAuth 클라이언트 + 리프레시 토큰" },
-    finance: { configured: false, label: "재무 파일", need: "대표가 현황 파일 업로드" },
+    toss: {
+      configured: Boolean(env.TOSS_API_KEY && env.TOSS_API_BASE_URL),
+      label: "토스증권·DART 조회",
+      need: "SGS Connector 서버 + ngrok 주소",
+    },
+    claude: {
+      configured: Boolean(env.ANTHROPIC_API_KEY),
+      label: "AI 리서치(Claude)",
+      need: "Anthropic API 키",
+    },
   };
 }
 

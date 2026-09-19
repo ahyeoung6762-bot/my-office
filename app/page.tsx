@@ -481,18 +481,18 @@ function LiveView({
               {snap.approvalPending ? (
                 <>
                   <div className="approval-top">
-                    <span className="mini-badge yellow">TOP 1 제안 · 92점</span>
+                    <span className="mini-badge yellow">TOP 1 리서치 테마 · 92점</span>
                     <span className="score blink">결재 대기</span>
                   </div>
-                  <h3>AI 회사가 매일 아침 나 대신 출근한다면?</h3>
+                  <h3>이번 주 리서치 테마: 2차전지 밸류체인 점검</h3>
                   <p>회의실에서 최아름·한도빈·김세리가 대표님을 기다리고 있어요.</p>
                   <div className="reason-list">
-                    <span>① 실제 구축 과정</span>
-                    <span>② 저장할 운영 구조</span>
-                    <span>③ 날것의 시행착오</span>
+                    <span>① 원재료·소재 공급망</span>
+                    <span>② 완성차 수주 모멘텀</span>
+                    <span>③ 업종 밸류에이션 비교</span>
                   </div>
                   <button className="btn approve-button" onClick={onApprove}>
-                    이 콘텐츠 승인하기
+                    이 리서치 테마 승인하기
                   </button>
                 </>
               ) : (
@@ -503,8 +503,8 @@ function LiveView({
                   <h3>{snap.approved ? "승인하신 안으로 제작 중이에요" : "아직 올라온 안건이 없어요"}</h3>
                   <p>
                     {snap.approved
-                      ? "대표 승인 이후 원고 → 제작 → 보관까지 이어집니다."
-                      : "업무를 시작하면 콘텐츠 전략팀이 TOP 3를 회의실로 올려요."}
+                      ? "대표 승인 이후 리포트 작성 → 검수 → 보관까지 이어집니다."
+                      : "업무를 시작하면 투자전략팀이 TOP 3를 회의실로 올려요."}
                   </p>
                 </>
               )}
@@ -733,11 +733,11 @@ function BriefingModal({ snap, onClose }: { snap: Snapshot; onClose: () => void 
           <ul>
             <li>
               <span className="dot green" />
-              완료 {snap.stats.done}팀 — 조사·기획·QA·대본·제작·저장까지 마쳤어요
+              완료 {snap.stats.done}팀 — 시황조사·전략·리스크검수·리포트·제작·저장까지 마쳤어요
             </li>
             <li>
               <span className="dot green" />
-              대표 승인 1건 반영 — TOP 1 콘텐츠 제작 완료
+              대표 승인 1건 반영 — TOP 1 리서치 제작 완료
             </li>
             <li>
               <span className="dot gray" />
@@ -994,9 +994,18 @@ function DashboardView({
           tone: publishResult?.discord.ok ? "mint" : integrations.discord?.configured ? "yellow" : "lav",
           href: "",
         },
-        { name: "Instagram", status: integrations.instagram?.need ?? "연동 대기", tone: "lav", href: "" },
-        { name: "Gmail", status: integrations.gmail?.need ?? "연동 대기", tone: "lav", href: "" },
-        { name: "재무 파일", status: integrations.finance?.need ?? "자료 대기", tone: "lav", href: "" },
+        {
+          name: "토스증권·DART",
+          status: integrations.toss?.configured ? "연동됨" : (integrations.toss?.need ?? "연동 대기"),
+          tone: integrations.toss?.configured ? "mint" : "lav",
+          href: "",
+        },
+        {
+          name: "AI 리서치(Claude)",
+          status: integrations.claude?.configured ? "연동됨" : (integrations.claude?.need ?? "연동 대기"),
+          tone: integrations.claude?.configured ? "mint" : "lav",
+          href: "",
+        },
       ]
     : [];
   const rows = [...integrations2Static, ...liveRows];
@@ -1154,21 +1163,25 @@ function DashboardView({
               </div>
               <div className="win-body approval-body">
                 <div className="approval-top">
-                  <span className="mini-badge yellow">TOP 1 제안</span>
+                  <span className="mini-badge yellow">TOP 1 리서치 테마</span>
                   <span className="score">92점</span>
                 </div>
                 <h3>
-                  AI 회사가 매일 아침
+                  이번 주 리서치 테마
                   <br />
-                  나 대신 출근한다면?
+                  2차전지 밸류체인 점검
                 </h3>
-                <p>지금 만들고 있는 시스템 자체를 날것의 성장기로 공개하는 크리에이터 아이덴티티 콘텐츠예요.</p>
+                <p>공급망 전반의 밸류에이션과 수급을 함께 점검하는 심층 리서치 테마예요.</p>
                 <button
                   className={`btn approve-button ${snap.approved ? "approved" : ""}`}
                   onClick={onApprove}
                   disabled={!snap.approvalPending}
                 >
-                  {snap.approved ? "승인 완료 · 제작팀 전달됨" : snap.approvalPending ? "이 콘텐츠 승인하기" : "대기 중인 안건 없음"}
+                  {snap.approved
+                    ? "승인 완료 · 제작팀 전달됨"
+                    : snap.approvalPending
+                      ? "이 리서치 테마 승인하기"
+                      : "대기 중인 안건 없음"}
                 </button>
               </div>
             </section>
@@ -1199,7 +1212,7 @@ function DashboardView({
                   <span className="tiny-label">대표님이 오늘 결정할 1개</span>
                   <strong>
                     {snap.approvalPending
-                      ? "TOP 1 콘텐츠를 제작할지 승인해주세요."
+                      ? "TOP 1 리서치를 제작할지 승인해주세요."
                       : snap.approved
                         ? "결정 완료! 제작팀이 다음 업무를 진행해요."
                         : "아직 올라온 안건이 없어요."}
@@ -1236,14 +1249,14 @@ function DashboardView({
               <span>바로가기</span>
             </div>
             <div className="result-row">
-              <b>이번 주 콘텐츠 캘린더 정리</b>
-              <span>기획 1팀</span>
+              <b>주간 리서치 캘린더 정리</b>
+              <span>투자전략 1팀</span>
               <span className="status-pill done">최종 완료</span>
               <span>—</span>
             </div>
             <div className="result-row">
-              <b>브랜드 템플릿 세팅</b>
-              <span>이미지 제작팀</span>
+              <b>리포트 템플릿 세팅</b>
+              <span>리포트디자인팀</span>
               <span className="status-pill done">최종 완료</span>
               <span>—</span>
             </div>
