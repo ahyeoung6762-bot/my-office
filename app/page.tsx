@@ -762,6 +762,7 @@ function AiBriefModal({ result, onClose }: { result: AiBriefResult; onClose: () 
     <div className="modal-backdrop" onClick={onClose}>
       <section
         className="win team-modal"
+        style={{ maxHeight: "88vh", display: "flex", flexDirection: "column" }}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -773,7 +774,7 @@ function AiBriefModal({ result, onClose }: { result: AiBriefResult; onClose: () 
             ✕
           </button>
         </div>
-        <div className="win-body">
+        <div className="win-body" style={{ overflowY: "auto", minHeight: 0 }}>
           <p className="brief-date">
             {new Date(result.generatedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} · Claude 웹 검색 기반
           </p>
@@ -848,6 +849,7 @@ function StockBriefModal({ result, onClose }: { result: StockBriefResult; onClos
     <div className="modal-backdrop" onClick={onClose}>
       <section
         className="win team-modal"
+        style={{ maxHeight: "88vh", display: "flex", flexDirection: "column" }}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -859,7 +861,7 @@ function StockBriefModal({ result, onClose }: { result: StockBriefResult; onClos
             ✕
           </button>
         </div>
-        <div className="win-body">
+        <div className="win-body" style={{ overflowY: "auto", minHeight: 0 }}>
           <p className="brief-date">
             {result.symbol} · {result.year}년 기준 ·{" "}
             {new Date(result.fetchedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}
