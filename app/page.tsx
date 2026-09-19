@@ -11,6 +11,7 @@ import {
   type PublishResult,
 } from "./game/report";
 import { requestAiBrief, type AiBriefResult } from "./game/aiBrief";
+import { requestStockBrief, type ProxyResult, type StockBriefResult } from "./game/stockBrief";
 import { Company, PHASES, type Agent, type DeptStatus, type Snapshot } from "./game/sim";
 import { CEO, DEPT_BRIEF, DEPT_LEAD, STAFF } from "./game/staff";
 import { DEPT_ROOMS, roomOf } from "./game/world";
@@ -71,6 +72,13 @@ export default function Home() {
   const [aiBrief, setAiBrief] = useState<{ busy: boolean; result: AiBriefResult | null }>({
     busy: false,
     result: null,
+  });
+  const [stockSymbol, setStockSymbol] = useState("005930");
+  const [stockYear, setStockYear] = useState(String(new Date().getFullYear() - 1));
+  const [stockBrief, setStockBrief] = useState<{ busy: boolean; result: StockBriefResult | null; error: string }>({
+    busy: false,
+    result: null,
+    error: "",
   });
   const publishedRef = useRef(false);
 
@@ -151,6 +159,22 @@ export default function Home() {
       showToast(message);
     }
   }, [showToast]);
+
+  const lookupStock = useCallback(async () => {
+    if (!/^[0-9]{6}$/.test(stockSymbol)) {
+      showToast("종목코드는 숫자 6자리로 입력해주세요 (예: 005930)");
+      return;
+    }
+    setStockBrief({ busy: true, result: null, error: "" });
+    try {
+      const result = await requestStockBrief(stockSymbol, stockYear);
+      setStockBrief({ busy: false, result, error: "" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setStockBrief({ busy: false, result: null, error: message });
+      showToast(message);
+    }
+  }, [stockSymbol, stockYear, showToast]);
 
   // 하루가 끝나면 자동으로 한 번 발행한다
   useEffect(() => {
@@ -238,6 +262,29 @@ export default function Home() {
           </div>
         </nav>
 
+        <section className="live-bar" style={{ flexWrap: "wrap", rowGap: 8 }}>
+          <span className="speed-label">📊 종목 리포트 (무료 · 토스증권+DART 직접 조회)</span>
+          <input
+            value={stockSymbol}
+            onChange={(event) => setStockSymbol(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+            placeholder="종목코드 6자리 (예: 005930)"
+            style={{ width: 170, padding: "6px 10px", borderRadius: 8 }}
+          />
+          <input
+            value={stockYear}
+            onChange={(event) => setStockYear(event.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+            placeholder="사업연도 (예: 2025)"
+            style={{ width: 120, padding: "6px 10px", borderRadius: 8 }}
+          />
+          <button
+            className="btn btn-ghost"
+            onClick={() => void lookupStock()}
+            disabled={stockBrief.busy || stockSymbol.length !== 6}
+          >
+            {stockBrief.busy ? "조회 중…" : "조회하기"}
+          </button>
+        </section>
+
         {view === "live" ? (
           <LiveView
             engine={engine}
@@ -292,6 +339,9 @@ export default function Home() {
       ) : null}
       {briefing ? <BriefingModal snap={snap} onClose={() => setBriefing(false)} /> : null}
       {aiBrief.result?.ok ? <AiBriefModal result={aiBrief.result} onClose={() => setAiBrief({ busy: false, result: null })} /> : null}
+      {stockBrief.result ? (
+        <StockBriefModal result={stockBrief.result} onClose={() => setStockBrief({ busy: false, result: null, error: "" })} />
+      ) : null}
       <div className={`toast ${toast ? "show" : ""}`} role="status">
         {toast}
       </div>
@@ -742,6 +792,139 @@ function AiBriefModal({ result, onClose }: { result: AiBriefResult; onClose: () 
           })}
           <p style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
             ⚠️ AI가 생성한 요약이며 투자 자문이 아닙니다. 최종 투자 판단은 본인 책임입니다.
+          </p>
+          <button className="btn btn-primary" onClick={onClose}>
+            확인
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function asRecord(data: unknown): Record<string, unknown> {
+  return data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+}
+
+function fmt(data: unknown, key: string, suffix = ""): string {
+  const value = asRecord(data)[key];
+  if (value === undefined || value === null || value === "") return "—";
+  const num = Number(value);
+  if (!Number.isNaN(num) && typeof value === "string" && /^-?[0-9.]+$/.test(value)) {
+    return `${num.toLocaleString("ko-KR")}${suffix}`;
+  }
+  return `${String(value)}${suffix}`;
+}
+
+function ProxySection({ title, result }: { title: string; result: ProxyResult }) {
+  return (
+    <div className="decision-box" style={{ marginBottom: 12 }}>
+      <span className="tiny-label">
+        {title} {result.ok ? "" : `— 조회 실패 (${result.status || "네트워크 오류"})`}
+      </span>
+      <pre
+        style={{
+          marginTop: 6,
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-all",
+          maxHeight: 180,
+          overflow: "auto",
+          fontSize: 12,
+          background: "rgba(0,0,0,0.15)",
+          padding: 8,
+          borderRadius: 8,
+        }}
+      >
+        {JSON.stringify(result.data, null, 2)}
+      </pre>
+    </div>
+  );
+}
+
+function StockBriefModal({ result, onClose }: { result: StockBriefResult; onClose: () => void }) {
+  const f = result.financial.data;
+  const g = result.growth.data;
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <section
+        className="win team-modal"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="종목 리포트"
+      >
+        <div className="win-bar">
+          <span>📊 stock_brief.{result.symbol}</span>
+          <button className="window-close" onClick={onClose}>
+            ✕
+          </button>
+        </div>
+        <div className="win-body">
+          <p className="brief-date">
+            {result.symbol} · {result.year}년 기준 ·{" "}
+            {new Date(result.fetchedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}
+          </p>
+          <h3>토스증권·DART 원본 데이터예요 (AI 해석 없이 그대로).</h3>
+
+          <div className="decision-box" style={{ marginBottom: 12 }}>
+            <span className="tiny-label">
+              🧾 재무분석팀 — {result.year}년 재무 {result.financial.ok ? "" : "— 조회 실패"}
+            </span>
+            {result.financial.ok ? (
+              <ul style={{ marginTop: 6 }}>
+                <li>매출 {fmt(f, "revenue", "원")} · 매출총이익 {fmt(f, "grossProfit", "원")}</li>
+                <li>영업이익 {fmt(f, "operatingProfit", "원")} · 당기순이익 {fmt(f, "netIncome", "원")}</li>
+                <li>영업활동현금흐름 {fmt(f, "operatingCashFlow", "원")}</li>
+                <li>
+                  매출총이익률 {fmt(f, "grossMargin", "%")} · 영업이익률 {fmt(f, "operatingMargin", "%")} · 순이익률{" "}
+                  {fmt(f, "netMargin", "%")}
+                </li>
+                <li>영업현금흐름/순이익 {fmt(f, "operatingCashFlowToNetIncome", "%")}</li>
+                <li>
+                  총자산 {fmt(f, "totalAssets", "원")} · 총부채 {fmt(f, "totalLiabilities", "원")} · 총자본{" "}
+                  {fmt(f, "totalEquity", "원")}
+                </li>
+                <li>
+                  부채비율 {fmt(f, "debtRatio", "%")} · 유동비율 {fmt(f, "currentRatio", "%")}
+                </li>
+              </ul>
+            ) : (
+              <pre style={{ marginTop: 6, fontSize: 12, whiteSpace: "pre-wrap" }}>{JSON.stringify(f, null, 2)}</pre>
+            )}
+          </div>
+
+          <div className="decision-box" style={{ marginBottom: 12 }}>
+            <span className="tiny-label">
+              📈 전년 대비 성장률 ({fmt(g, "previousYear")} → {fmt(g, "currentYear")}){" "}
+              {result.growth.ok ? "" : "— 조회 실패"}
+            </span>
+            {result.growth.ok ? (
+              <ul style={{ marginTop: 6 }}>
+                <li>매출 성장률 {fmt(g, "revenueGrowth", "%")} · 매출총이익 성장률 {fmt(g, "grossProfitGrowth", "%")}</li>
+                <li>영업이익 성장률 {fmt(g, "operatingProfitGrowth", "%")} · 순이익 성장률 {fmt(g, "netIncomeGrowth", "%")}</li>
+                <li>영업현금흐름 성장률 {fmt(g, "operatingCashFlowGrowth", "%")}</li>
+                <li>총자산 증가율 {fmt(g, "totalAssetsGrowth", "%")} · 총부채 증가율 {fmt(g, "totalLiabilitiesGrowth", "%")}</li>
+                <li>
+                  부채비율 {fmt(g, "previousDebtRatio", "%")} → {fmt(g, "currentDebtRatio", "%")} (변화{" "}
+                  {fmt(g, "debtRatioChange", "%p")})
+                </li>
+                <li>
+                  유동비율 {fmt(g, "previousCurrentRatio", "%")} → {fmt(g, "currentCurrentRatio", "%")} (변화{" "}
+                  {fmt(g, "currentRatioChange", "%p")})
+                </li>
+              </ul>
+            ) : (
+              <pre style={{ marginTop: 6, fontSize: 12, whiteSpace: "pre-wrap" }}>{JSON.stringify(g, null, 2)}</pre>
+            )}
+          </div>
+
+          <ProxySection title="💰 현재가" result={result.price} />
+          <ProxySection title="📉 기술분석 (이동평균·이격도·RSI·거래량)" result={result.technical} />
+          <ProxySection title="🕯️ 최근 캔들 (일봉 20개)" result={result.candles} />
+          <ProxySection title="📋 최근 공시 (365일)" result={result.disclosures} />
+
+          <p style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+            ⚠️ 토스증권·DART 원본 데이터이며 투자 자문이 아닙니다. 최종 투자 판단은 본인 책임입니다.
           </p>
           <button className="btn btn-primary" onClick={onClose}>
             확인

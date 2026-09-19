@@ -23,3 +23,12 @@ DISCORD_WEBHOOK_URL=
 # 2) 이 키는 사용한 만큼 비용이 청구됩니다 (브리핑 1회 생성에 대략 몇 백 원 수준)
 # 채워두면 화면의 "🧠 오늘의 AI 리서치" 버튼이 실제 웹 검색으로 오늘 시황을 찾아 리포트를 씁니다.
 ANTHROPIC_API_KEY=
+
+# ── 종목 리포트 (토스증권·DART, 직접 만든 SGS Connector) ──
+# AI(Claude)를 쓰지 않는 순수 데이터 조회라 비용이 들지 않습니다.
+# TOSS_API_KEY: SGS Connector openapi 스키마의 MyApiKey (X-API-Key 헤더 값)과 동일하게 입력
+# TOSS_API_BASE_URL: SGS Connector 서버 주소 (예: https://xxxx.ngrok-free.dev), 끝에 / 는 빼주세요
+# ⚠️ ngrok 무료 터널은 컴퓨터를 껐다 켜거나 ngrok을 재시작할 때마다 주소가 바뀝니다.
+#    그때마다 여기 TOSS_API_BASE_URL을 새 주소로 바꿔줘야 하고, SGS Connector 서버 자체도 켜져 있어야 합니다.
+TOSS_API_KEY=
+TOSS_API_BASE_URL=

@@ -3,8 +3,9 @@ import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } fr
 import handler from "vinext/server/app-router-entry";
 import { integrationStatus, publishReport, type DayReport, type PublishEnv } from "./report";
 import { generateAiBrief, type AiBriefEnv } from "./ai-brief";
+import { getStockBrief, type TossEnv } from "./toss";
 
-interface Env extends PublishEnv, AiBriefEnv {
+interface Env extends PublishEnv, AiBriefEnv, TossEnv {
   ASSETS: Fetcher;
   DB: D1Database;
   IMAGES: {
@@ -53,6 +54,20 @@ const worker = {
       if (request.method !== "POST") return new Response("POST only", { status: 405 });
       const result = await generateAiBrief(env);
       return Response.json(result, { status: result.ok ? 200 : 502 });
+    }
+
+    // 종목 리포트 조회 — 토스증권·DART 프록시(SGS Connector)를 직접 호출한다 (LLM 비용 없음)
+    if (url.pathname === "/api/stock-brief") {
+      const symbol = url.searchParams.get("symbol") ?? "";
+      const year = url.searchParams.get("year") ?? String(new Date().getFullYear() - 1);
+      if (!/^[0-9]{6}$/.test(symbol)) {
+        return Response.json({ error: "종목코드는 숫자 6자리여야 해요 (예: 005930)" }, { status: 400 });
+      }
+      if (!/^[0-9]{4}$/.test(year)) {
+        return Response.json({ error: "사업연도는 숫자 4자리여야 해요 (예: 2025)" }, { status: 400 });
+      }
+      const result = await getStockBrief(env, symbol, year);
+      return Response.json(result);
     }
 
     if (url.pathname === "/_vinext/image") {
