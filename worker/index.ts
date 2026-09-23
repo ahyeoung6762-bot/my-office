@@ -4,6 +4,8 @@ import handler from "vinext/server/app-router-entry";
 import { integrationStatus, publishReport, type DayReport, type PublishEnv } from "./report";
 import { generateAiBrief, type AiBriefEnv } from "./ai-brief";
 import { getStockBrief, type TossEnv } from "./toss";
+import { analyzeWatchlist } from "./watchlist";
+import { WATCHLIST } from "../company.config";
 
 interface Env extends PublishEnv, AiBriefEnv, TossEnv {
   ASSETS: Fetcher;
@@ -68,6 +70,17 @@ const worker = {
       }
       const result = await getStockBrief(env, symbol, year);
       return Response.json(result);
+    }
+
+    // 관심종목 분석 — 실제 재무 데이터 + Claude 웹 검색으로 저평가·테마 종합 결론 (버튼 눌렀을 때만)
+    if (url.pathname === "/api/watchlist-analysis") {
+      if (request.method !== "POST") return new Response("POST only", { status: 405 });
+      const year = url.searchParams.get("year") ?? String(new Date().getFullYear() - 1);
+      if (!/^[0-9]{4}$/.test(year)) {
+        return Response.json({ error: "사업연도는 숫자 4자리여야 해요 (예: 2025)" }, { status: 400 });
+      }
+      const result = await analyzeWatchlist(env, WATCHLIST, year);
+      return Response.json(result, { status: result.ok ? 200 : 502 });
     }
 
     if (url.pathname === "/_vinext/image") {

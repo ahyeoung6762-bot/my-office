@@ -12,6 +12,7 @@ import {
 } from "./game/report";
 import { requestAiBrief, type AiBriefResult } from "./game/aiBrief";
 import { requestStockBrief, type ProxyResult, type StockBriefResult } from "./game/stockBrief";
+import { requestWatchlistAnalysis, type WatchlistAnalysis } from "./game/watchlist";
 import { Company, PHASES, type Agent, type DeptStatus, type Snapshot } from "./game/sim";
 import { CEO, DEPT_BRIEF, DEPT_LEAD, STAFF } from "./game/staff";
 import { DEPT_ROOMS, roomOf } from "./game/world";
@@ -80,6 +81,10 @@ export default function Home() {
     result: null,
     error: "",
   });
+  const [watchlistState, setWatchlistState] = useState<{ busy: boolean; result: WatchlistAnalysis | null }>({
+    busy: false,
+    result: null,
+  });
   const publishedRef = useRef(false);
 
   useEffect(() => {
@@ -116,9 +121,13 @@ export default function Home() {
   // 연동 설정 여부를 서버에서 받아온다 (값이 아니라 설정 여부만)
   useEffect(() => {
     fetchIntegrations()
-      .then(setIntegrations)
+      .then((status) => {
+        setIntegrations(status);
+        // 토스증권·DART가 실제로 연동돼 있으면 종목분석팀·재무분석팀의 "연동 대기"를 풀어준다
+        if (status.toss?.configured) engine.setUnblockedDepts(["brand", "finance"]);
+      })
       .catch(() => setIntegrations(null));
-  }, []);
+  }, [engine]);
 
   const sendReport = useCallback(
     async (auto: boolean) => {
@@ -175,6 +184,22 @@ export default function Home() {
       showToast(message);
     }
   }, [stockSymbol, stockYear, showToast]);
+
+  const runWatchlistAnalysis = useCallback(async () => {
+    setWatchlistState({ busy: true, result: null });
+    try {
+      const result = await requestWatchlistAnalysis(stockYear);
+      setWatchlistState({ busy: false, result });
+      showToast(result.ok ? "관심종목 분석 완료 — 대시보드에서 확인하세요" : (result.error ?? "관심종목 분석 실패"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setWatchlistState({
+        busy: false,
+        result: { ok: false, generatedAt: new Date().toISOString(), year: stockYear, summary: "", themes: [], stocks: [], error: message },
+      });
+      showToast(message);
+    }
+  }, [stockYear, showToast]);
 
   // 하루가 끝나면 자동으로 한 번 발행한다
   useEffect(() => {
@@ -283,6 +308,12 @@ export default function Home() {
           >
             {stockBrief.busy ? "조회 중…" : "조회하기"}
           </button>
+          <span className="speed-label" style={{ marginLeft: 12 }}>
+            🔍 관심종목 분석 (company.config.ts의 WATCHLIST)
+          </span>
+          <button className="btn btn-ghost" onClick={() => void runWatchlistAnalysis()} disabled={watchlistState.busy}>
+            {watchlistState.busy ? "분석 중…" : "저평가·테마 분석하기"}
+          </button>
         </section>
 
         {view === "live" ? (
@@ -314,6 +345,7 @@ export default function Home() {
             onSelect={(id) => setSelectedId(id)}
             integrations={integrations}
             publishResult={publishState.result}
+            watchlistResult={watchlistState.result}
           />
         )}
 
@@ -959,6 +991,7 @@ function DashboardView({
   onSelect,
   integrations,
   publishResult,
+  watchlistResult,
 }: {
   teams: TeamRow[];
   filteredTeams: TeamRow[];
@@ -970,6 +1003,7 @@ function DashboardView({
   onSelect: (id: string) => void;
   integrations: IntegrationStatus | null;
   publishResult: PublishResult | null;
+  watchlistResult: WatchlistAnalysis | null;
 }) {
   // 서버가 알려준 실제 설정 상태로 표시한다 (연결됐다고 거짓 보고하지 않는다)
   const liveRows = integrations
@@ -1221,6 +1255,62 @@ function DashboardView({
               </div>
             </section>
           </section>
+        </div>
+      </section>
+
+      <section className="win storage">
+        <div className="win-bar">
+          <span>🧾 watchlist_conclusion</span>
+          <span className="window-controls">—　▢　✕</span>
+        </div>
+        <div className="win-body">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">FINAL CONCLUSION</p>
+              <h2>관심종목 최종결론 요약</h2>
+            </div>
+          </div>
+          {watchlistResult?.ok ? (
+            <>
+              <p className="brief-date">
+                {watchlistResult.year}년 기준 ·{" "}
+                {new Date(watchlistResult.generatedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}
+              </p>
+              <p>{watchlistResult.summary}</p>
+              {watchlistResult.themes.length > 0 ? (
+                <p>
+                  <span className="tiny-label">요즘 뜨는 테마</span>{" "}
+                  {watchlistResult.themes.join(" · ")}
+                </p>
+              ) : null}
+              <div className="result-table">
+                <div className="result-row header">
+                  <span>종목</span>
+                  <span>판단</span>
+                  <span>근거</span>
+                  <span></span>
+                </div>
+                {watchlistResult.stocks.map((s) => (
+                  <div className="result-row" key={s.code}>
+                    <b>
+                      {s.name} ({s.code})
+                    </b>
+                    <span>{s.verdict}</span>
+                    <span>{s.reason}</span>
+                    <span>—</span>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+                ⚠️ AI가 생성한 요약이며 투자 자문이 아닙니다. 최종 투자 판단은 본인 책임입니다.
+              </p>
+            </>
+          ) : (
+            <p>
+              {watchlistResult?.error ??
+                "아직 분석한 적 없어요. 위쪽 \"저평가·테마 분석하기\" 버튼을 누르면 company.config.ts에 적어둔 관심종목을 분석해서 여기 요약이 뜹니다."}
+            </p>
+          )}
         </div>
       </section>
 

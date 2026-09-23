@@ -307,3 +307,17 @@ export const PENDING_INTEGRATIONS: Record<string, string> = {
  * 예: "https://www.notion.so/내페이지주소"
  */
 export const STORAGE_LINK = "";
+
+/**
+ * 대표님이 직접 정한 관심종목 리스트.
+ * "관심종목 분석" 버튼을 누르면 이 종목들만 모아 실제 재무 데이터를 확인하고,
+ * 저평가 신호가 있는지·요즘 뜨는 테마와 관련 있는지 Claude가 분석해서 요약해줍니다.
+ *
+ * ⚠️ 5~15개 정도가 적당해요. 너무 많으면 DART 조회가 오래 걸리고 Claude API 비용도 늘어납니다.
+ * 종목코드는 6자리 숫자 (네이버·다음 금융에서 종목명 검색하면 확인 가능).
+ */
+export const WATCHLIST: { code: string; name: string }[] = [
+  { code: "005930", name: "삼성전자" },
+  { code: "000660", name: "SK하이닉스" },
+  { code: "035420", name: "NAVER" },
+];

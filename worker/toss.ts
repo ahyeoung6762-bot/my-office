@@ -73,3 +73,20 @@ export async function getStockBrief(env: TossEnv, symbol: string, year: string):
   ]);
   return { symbol, year, fetchedAt: new Date().toISOString(), price, technical, candles, financial, growth, disclosures };
 }
+
+export type WatchlistFinancials = {
+  symbol: string;
+  financial: ProxyResult;
+  growth: ProxyResult;
+  disclosures: ProxyResult;
+};
+
+/** 관심종목 분석용 — 시세·캔들·기술분석은 빼고 재무 데이터만 가볍게 모은다 */
+export async function getWatchlistFinancials(env: TossEnv, symbol: string, year: string): Promise<WatchlistFinancials> {
+  const [financial, growth, disclosures] = await Promise.all([
+    call(env, `/dart/${symbol}/financial-sgs?bsns_year=${year}`),
+    call(env, `/dart/${symbol}/financial-growth-sgs?bsns_year=${year}`),
+    call(env, `/dart/${symbol}/disclosures-simple?count=5&days=90`),
+  ]);
+  return { symbol, financial, growth, disclosures };
+}

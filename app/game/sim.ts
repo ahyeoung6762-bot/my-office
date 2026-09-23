@@ -204,9 +204,19 @@ export class Company {
   private seatBook = new Map<string, Pt>();
   /** 시나리오 장면에 참여 중인 직원 — 자율 행동(커피·잡담)이 끼어들지 못하게 잠근다 */
   private locked = new Set<string>();
+  /** 실제 .dev.vars 연동이 확인된 부서 — BLOCKED_DEPTS에 있어도 "연동 대기"를 풀어준다 */
+  private unblockedDepts = new Set<string>();
 
   constructor() {
     this.reset();
+  }
+
+  /** 실제 연동(.dev.vars) 설정 여부를 반영해 부서의 "연동 대기" 상태를 풀어준다 */
+  setUnblockedDepts(ids: string[]) {
+    for (const id of ids) {
+      this.unblockedDepts.add(id);
+      if (this.deptStatus[id] === "연동 대기") this.deptStatus[id] = "대기";
+    }
   }
 
   reset() {
@@ -250,7 +260,7 @@ export class Company {
     ceo.facing = "down";
 
     for (const room of DEPT_ROOMS) {
-      this.deptStatus[room.id] = BLOCKED_DEPTS.has(room.id) ? "연동 대기" : "대기";
+      this.deptStatus[room.id] = BLOCKED_DEPTS.has(room.id) && !this.unblockedDepts.has(room.id) ? "연동 대기" : "대기";
     }
     this.pushLog("🎀", "대표실 준비 완료. 출근 버튼을 기다리는 중이에요.", "lav");
     this.pushChat("staff", "김세리", "대표님, 비서실장 김세리입니다. 궁금한 건 여기에 바로 물어보세요.");
