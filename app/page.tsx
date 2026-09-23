@@ -195,7 +195,7 @@ export default function Home() {
       const message = error instanceof Error ? error.message : String(error);
       setWatchlistState({
         busy: false,
-        result: { ok: false, generatedAt: new Date().toISOString(), year: stockYear, summary: "", themes: [], stocks: [], error: message },
+        result: { ok: false, generatedAt: new Date().toISOString(), year: stockYear, summary: "", stocks: [], error: message },
       });
       showToast(message);
     }
@@ -309,10 +309,10 @@ export default function Home() {
             {stockBrief.busy ? "조회 중…" : "조회하기"}
           </button>
           <span className="speed-label" style={{ marginLeft: 12 }}>
-            🔍 관심종목 분석 (company.config.ts의 WATCHLIST)
+            🔍 관심종목 재무 건전성 분석 (무료 · company.config.ts의 WATCHLIST)
           </span>
           <button className="btn btn-ghost" onClick={() => void runWatchlistAnalysis()} disabled={watchlistState.busy}>
-            {watchlistState.busy ? "분석 중…" : "저평가·테마 분석하기"}
+            {watchlistState.busy ? "분석 중…" : "재무 건전성 분석하기"}
           </button>
         </section>
 
@@ -1267,7 +1267,7 @@ function DashboardView({
           <div className="section-heading">
             <div>
               <p className="eyebrow">FINAL CONCLUSION</p>
-              <h2>관심종목 최종결론 요약</h2>
+              <h2>관심종목 재무 건전성 요약</h2>
             </div>
           </div>
           {watchlistResult?.ok ? (
@@ -1277,12 +1277,6 @@ function DashboardView({
                 {new Date(watchlistResult.generatedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}
               </p>
               <p>{watchlistResult.summary}</p>
-              {watchlistResult.themes.length > 0 ? (
-                <p>
-                  <span className="tiny-label">요즘 뜨는 테마</span>{" "}
-                  {watchlistResult.themes.join(" · ")}
-                </p>
-              ) : null}
               <div className="result-table">
                 <div className="result-row header">
                   <span>종목</span>
@@ -1302,13 +1296,14 @@ function DashboardView({
                 ))}
               </div>
               <p style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-                ⚠️ AI가 생성한 요약이며 투자 자문이 아닙니다. 최종 투자 판단은 본인 책임입니다.
+                ⚠️ DART 재무 지표만으로 계산한 규칙 기반 결과이며, 주가·PER·PBR은 반영되지 않았고 투자 자문이 아닙니다.
+                최종 투자 판단은 본인 책임입니다.
               </p>
             </>
           ) : (
             <p>
               {watchlistResult?.error ??
-                "아직 분석한 적 없어요. 위쪽 \"저평가·테마 분석하기\" 버튼을 누르면 company.config.ts에 적어둔 관심종목을 분석해서 여기 요약이 뜹니다."}
+                "아직 분석한 적 없어요. 위쪽 \"재무 건전성 분석하기\" 버튼을 누르면 company.config.ts에 적어둔 관심종목을 분석해서 여기 요약이 뜹니다."}
             </p>
           )}
         </div>
